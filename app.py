@@ -33,13 +33,33 @@ else:
     @st.cache_resource
     def inicializar_modelo():
         return genai.GenerativeModel(
-            model_name="gemini-3.5-flash",
+            model_name="gemini-1.5-flash",
             system_instruction=system_instruction,
             generation_config={"temperature": 0.3}
         )
+# Inicializar o modelo e o chat
+model = inicializar_modelo()
 
-    model = inicializar_modelo()
+if "gemini_sessao" not in st.session_state:
+    st.session_state.gemini_sessao = model.start_chat(history=[])
 
+# Interface do chat
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("Digite aqui a sua dúvida ou raciocínio..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        response = st.session_state.gemini_sessao.send_message(prompt)
+        st.markdown(response.text)
+    st.session_state.messages.append({"role": "assistant", "content": response.text})
     # 5. Gerenciamento do Histórico de Conversa na Memória da Página
     if "historico_chat" not in st.session_state:
         st.session_state.historico_chat = []
