@@ -26,10 +26,11 @@ Diretrizes:
 # 3. Inicialização do modelo e chat
 if "gemini_model" not in st.session_state:
     st.session_state.gemini_model = genai.GenerativeModel(
-        gemini-1.5-flash-latest",
+        model_name="gemini-1.5-flash-latest",
         system_instruction=system_instruction,
         generation_config={"temperature": 0.3}
     )
+
 if "gemini_sessao" not in st.session_state:
     st.session_state.gemini_sessao = st.session_state.gemini_model.start_chat(history=[])
 
