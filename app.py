@@ -30,7 +30,6 @@ if "gemini_model" not in st.session_state:
         system_instruction=system_instruction,
         generation_config={"temperature": 0.3}
     )
-
 if "gemini_sessao" not in st.session_state:
     st.session_state.gemini_sessao = st.session_state.gemini_model.start_chat(history=[])
 
