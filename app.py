@@ -17,12 +17,7 @@ except Exception as e:
     st.error("Erro ao carregar a chave API. Verifique as configurações de 'Secrets'.")
     st.stop()
 
-if not API_KEY or API_KEY == "SUA_API_KEY_AQUI":
-    st.error("Por favor, configure a sua API Key do Google AI Studio no código para iniciar.")
-else:
-    genai.configure(api_key=API_KEY)
-
-    # 3. Base Orientadora fundamentada na Teoria Histórico-Cultural
+ # 3. Base Orientadora fundamentada na Teoria Histórico-Cultural
     system_instruction = (
         "Atue como um mediador pedagógico fundamentado na Teoria Histórico-Cultural da Atividade "
         "(perspectivas de Vygotsky, Leontiev, Galperin e Majmutov). Seu objetivo é conduzir estudantes "
