@@ -1,7 +1,6 @@
 import streamlit as st
-from google import genai
-from google.genai import types
-from google.genai.errors import APIError
+import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted
 
 # 1. Configuração visual da página web do Streamlit
 st.set_page_config(page_title="Tutor IA - Situações Problema", layout="centered")
@@ -12,7 +11,7 @@ st.write("Espaço de mediação para a resolução de Atividades de Situações 
 # 2. Configuração de Segurança da API Key via Secrets
 try:
     api_key = st.secrets["GEMINI_API_KEY"]
-    client = genai.Client(api_key=api_key)
+    genai.configure(api_key=api_key)
 except Exception as e:
     st.error("Erro ao carregar a chave API. Verifique as configurações de 'Secrets'.")
     st.stop()
@@ -30,18 +29,22 @@ system_instruction = (
     "4. Se o aluno errar, apresente uma nova situação ou uma pergunta reflexiva que evidencie a contradição no raciocínio dele."
 )
 
-# 4. Inicialização do Modelo e Gerenciamento da Sessão de Chat
-if "historico_chat" not in st.session_state:
-    st.session_state.historico_chat = []
-    st.session_state.gemini_sessao = client.chats.create(
-        model="gemini-2.5-flash",
-        config=types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            temperature=0.3
-        )
+# 4. Inicialização do Modelo Oficial Estável
+if "gemini_model" not in st.session_state:
+    st.session_state.gemini_model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=system_instruction,
+        generation_config={"temperature": 0.3}
     )
 
-# 5. Exibe as mensagens anteriores na tela
+if "gemini_sessao" not in st.session_state:
+    st.session_state.gemini_sessao = st.session_state.gemini_model.start_chat(history=[])
+
+# 5. Gerenciamento do Histórico de Conversa na Memória da Página
+if "historico_chat" not in st.session_state:
+    st.session_state.historico_chat = []
+
+# Exibe as mensagens anteriores na tela
 for mensagem in st.session_state.historico_chat:
     with st.chat_message(mensagem["role"]):
         st.markdown(mensagem["content"])
@@ -65,13 +68,10 @@ if entrada_estudante := st.chat_input("Digite aqui a sua dúvida ou raciocínio.
                 # Só adiciona no histórico se o envio ocorreu com sucesso
                 st.session_state.historico_chat.append({"role": "assistant", "content": texto_mediacao})
             
-            except APIError as e:
-                # Captura erros de limite de cota de forma amigável
-                if e.code == 429:
-                    texto_erro = (
-                        "⚠️ **Muitos acessos simultâneos!** O limite de requisições "
-                        "por minuto foi atingido. Por favor, aguarde cerca de 30 a 40 segundos e envie sua mensagem novamente."
-                    )
-                else:
-                    texto_erro = f"⚠️ Erro na API do Gemini: {e.message}"
+            except ResourceExhausted:
+                # Captura o erro de limite de cota de forma amigável
+                texto_erro = (
+                    "⚠️ **Muitos acessos simultâneos!** O limite de requisições gratuitas "
+                    "por minuto foi atingido. Por favor, aguarde cerca de 30 a 40 segundos e envie sua mensagem novamente."
+                )
                 marcador_resposta.error(texto_erro)
