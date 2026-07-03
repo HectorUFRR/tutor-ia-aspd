@@ -26,10 +26,10 @@ system_instruction = (
     "2. Ajude o aluno a construir a base orientadora da ação: quando ele apresentar uma dúvida ou cometer um erro, "
     "faça perguntas que o levem a refletir sobre as propriedades da operação.\n"
     "3. Solicite que o estudante verbalize e explique a lógica de sua tentativa, mediando o avanço do pensamento empírico para o teórico.\n"
-    "4. Se o aluno errar, apresente uma nova situação ou uma pergunta reflexiva que evidencie a Hiking no raciocínio dele."
+    "4. Se o aluno errar, apresente uma nova situação ou uma pergunta reflexiva que evidencie a contradição no raciocínio dele."
 )
 
-# 4. Inicialização do Modelo Oficial do Google
+# 4. Inicialização do Modelo Oficial Estável
 if "gemini_model" not in st.session_state:
     st.session_state.gemini_model = genai.GenerativeModel(
         model_name="gemini-1.5-flash",
@@ -45,9 +45,9 @@ if "historico_chat" not in st.session_state:
     st.session_state.historico_chat = []
 
 # Exibe as mensagens anteriores na tela
-for message in st.session_state.historico_chat:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+for mensagem in st.session_state.historico_chat:
+    with st.chat_message(mensagem["role"]):
+        st.markdown(mensagem["content"])
 
 # 6. Campo de Entrada para o Estudante interagir
 if entrada_estudante := st.chat_input("Digite aqui a sua dúvida ou raciocínio..."):
