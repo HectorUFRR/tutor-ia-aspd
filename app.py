@@ -2,76 +2,62 @@ import streamlit as st
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted
 
-# 1. Configuração visual da página web do Streamlit
+# 1. Configuração da página
 st.set_page_config(page_title="Tutor IA - Situações Problema", layout="centered")
-
 st.title("🤖 Assistente Pedagógico Interativo")
 st.write("Espaço de mediação para a resolução de Atividades de Situações Problema.")
 
-# 2. Configuração de Segurança da API Key via Secrets
+# 2. Configuração da API Key (Configurada no Streamlit Cloud)
 try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
-except Exception as e:
-    st.error("Erro ao carregar a chave API. Verifique as configurações de 'Secrets'.")
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+except Exception:
+    st.error("Erro ao carregar a chave API. Verifique os 'Secrets' no seu painel.")
     st.stop()
 
-# 3. Base Orientadora fundamentada na Teoria Histórico-Cultural
+# 3. Base Orientadora (Fundamentada na Teoria Histórico-Cultural)
 system_instruction = (
     "Atue como um mediador pedagógico fundamentado na Teoria Histórico-Cultural da Atividade "
     "(perspectivas de Vygotsky, Leontiev, Galperin e Majmutov). Seu objetivo é conduzir estudantes "
-    "através de uma Atividade de Situações Problema envolvendo conceitos matemáticos (como multiplicação e divisão). "
+    "através de uma Atividade de Situações Problema (ASPD) envolvendo conceitos matemáticos. "
     "Diretrizes Rigorosas:\n"
-    "1. NUNCA fornece a resposta final ou o cálculo pronto de imediato.\n"
-    "2. Ajude o aluno a construir a base orientadora da ação: quando ele apresentar uma dúvida ou cometer um erro, "
-    "faça perguntas que o levem a refletir sobre as propriedades da operação.\n"
-    "3. Solicite que o estudante verbalize e explique a lógica de sua tentativa, mediando o avanço do pensamento empírico para o teórico.\n"
-    "4. Se o aluno errar, apresente uma nova situação ou uma pergunta reflexiva que evidencie a contradição no raciocínio dele."
+    "1. NUNCA forneça a resposta final ou o cálculo pronto.\n"
+    "2. Ajude o aluno a construir a base orientadora da ação: faça perguntas que o levem a refletir sobre "
+    "os conceitos de grandeza, medida, unidade e atributos do objeto.\n"
+    "3. Solicite que o estudante explique a lógica de sua tentativa, mediando o avanço do pensamento "
+    "empírico para o teórico.\n"
+    "4. Se o aluno errar, apresente uma situação ou pergunta reflexiva que evidencie a contradição no raciocínio."
 )
 
-# 4. Inicialização do Modelo Oficial Estável
-if "gemini_model" not in st.session_state:
-    st.session_state.gemini_model = genai.GenerativeModel(
+# 4. Inicialização do Modelo
+if "gemini_sessao" not in st.session_state:
+    model = genai.GenerativeModel(
         model_name="gemini-1.5-flash",
         system_instruction=system_instruction,
         generation_config={"temperature": 0.3}
     )
+    st.session_state.gemini_sessao = model.start_chat(history=[])
 
-if "gemini_sessao" not in st.session_state:
-    st.session_state.gemini_sessao = st.session_state.gemini_model.start_chat(history=[])
-
-# 5. Gerenciamento do Histórico de Conversa na Memória da Página
+# 5. Histórico
 if "historico_chat" not in st.session_state:
     st.session_state.historico_chat = []
 
-# Exibe as mensagens anteriores na tela
-for mensagem in st.session_state.historico_chat:
-    with st.chat_message(mensagem["role"]):
-        st.markdown(mensagem["content"])
+for msg in st.session_state.historico_chat:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# 6. Campo de Entrada para o Estudante interagir
-if entrada_estudante := st.chat_input("Digite aqui a sua dúvida ou raciocínio..."):
-    
+# 6. Interação
+if entrada := st.chat_input("Digite sua dúvida ou raciocínio..."):
+    st.session_state.historico_chat.append({"role": "user", "content": entrada})
     with st.chat_message("user"):
-        st.markdown(entrada_estudante)
-    st.session_state.historico_chat.append({"role": "user", "content": entrada_estudante})
+        st.markdown(entrada)
 
     with st.chat_message("assistant"):
-        marcador_resposta = st.empty()
-        with st.spinner("A analisar o raciocínio..."):
+        marcador = st.empty()
+        with st.spinner("Analisando..."):
             try:
-                # Tenta enviar a mensagem para a API do Gemini
-                resposta_modelo = st.session_state.gemini_sessao.send_message(entrada_estudante)
-                texto_mediacao = resposta_modelo.text
-                marcador_resposta.markdown(texto_mediacao)
-                
-                # Só adiciona no histórico se o envio ocorreu com sucesso
-                st.session_state.historico_chat.append({"role": "assistant", "content": texto_mediacao})
-            
+                resposta = st.session_state.gemini_sessao.send_message(entrada)
+                texto = resposta.text
+                marcador.markdown(texto)
+                st.session_state.historico_chat.append({"role": "assistant", "content": texto})
             except ResourceExhausted:
-                # Captura o erro de limite de cota de forma amigável
-                texto_erro = (
-                    "⚠️ **Muitos acessos simultâneos!** O limite de requisições gratuitas "
-                    "por minuto foi atingido. Por favor, aguarde cerca de 30 a 40 segundos e envie sua mensagem novamente."
-                )
-                marcador_resposta.error(texto_erro)
+                marcador.error("Limite de requisições atingido. Aguarde 30 segundos.")
